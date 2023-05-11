@@ -6,16 +6,53 @@
 //
 
 import SwiftUI
+import Combine
 
 struct ContentView: View {
+    
+    
+    @StateObject private var viewModel = CurrentValueSubjectViewModel()
+    
     var body: some View {
         VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundColor(.accentColor)
-            Text("Hello, world!")
+            Text("\(viewModel.selectionSame.value ? "Selected twice": "") \(viewModel.selection.value)")
+                .foregroundColor(viewModel.selectionSame.value ? .red : .green)
+                .padding()
+            
+            Button("Selected coffee") {
+                viewModel.selection.value = "Raf coffee"
+            }
+            .padding()
+            
+            Button("Selected tea") {
+                viewModel.selection.send("Green tea")
+            }
+            .padding()
         }
-        .padding()
+    }
+}
+
+class CurrentValueSubjectViewModel: ObservableObject {
+    
+    var selection = CurrentValueSubject<String, Never>("")
+    var selectionSame = CurrentValueSubject<Bool, Never>(false)
+    
+    var cancellable: Set<AnyCancellable> = []
+    
+    init() {
+        selection
+            .map {[unowned self] newValue -> Bool in
+                if newValue == selection.value {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            .sink { [unowned self] value in
+                self.selectionSame.value = value
+                objectWillChange.send()
+            }
+            .store(in: &cancellable)
     }
 }
 
